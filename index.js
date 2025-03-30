@@ -1,103 +1,84 @@
+// app.js
+require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
-const sqlite3 = require('sqlite3').verbose();
-const xlsx = require('xlsx');
-const fs = require('fs');
-
 const app = express();
-const port = 3000;
+const sqlite3 = require('sqlite3').verbose();
+const db = new sqlite3.Database('travel.db');
 
-// SQLite 데이터베이스 연결
-const db = new sqlite3.Database('./database.db', (err) => {
-  if (err) {
-    console.error('SQLite 연결 오류:', err.message);
-  } else {
-    console.log('SQLite 데이터베이스 연결됨.');
-  }
+
+const PORT = 3000;
+
+// CORS 허용 (개발용)
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  next();
 });
 
-// API 호출 및 데이터 저장 함수
-const fetchAndSaveWeatherData = async () => {
-  const url = 'https://apis.data.go.kr/1360000/TourStnInfoService1/getTourStnVilageFcst1';
-  const params = {
-    ServiceKey: 'x3RqAMlDK9a3lRjqkiWHCyGOWSesL%2FU51q1hPcvsQ%2Be7hbSSR%2BzjDNHR2k3W9dXl1zU6RqQFVS0ynjP%2FzEfBmw%3D%3D',
-    pageNo: 10,
-    numOfRows: 10,
-    CURRENT_DATE: '2025-03-29',
-    HOUR: 24,
-    COURSE_ID: '경기도',
-  };
+// 날씨 API 엔드포인트
+app.get('/api/weather', async (req, res) => {
+  const { lat, lon } = req.query;
+
+  if (!lat || !lon) {
+    return res.status(400).json({ error: "lat and lon are required" });
+  }
+
+  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
+  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
 
   try {
-    const response = await axios.get(url, { params });
-    const weatherData = response.data;
-
-    // 실제 응답에서 필요한 데이터를 추출하여 저장
-    const weatherInfo = JSON.stringify(weatherData); // 예시로 데이터를 문자열로 저장
-
-    // 데이터를 SQLite에 저장
-    const stmt = db.prepare('INSERT INTO weather_data (course_id, current_date, hour, weather_info) VALUES (?, ?, ?, ?)');
-    stmt.run('경기도', '2025-03-29', 24, weatherInfo, (err) => {
-      if (err) {
-        console.error('데이터 저장 오류:', err.message);
-      } else {
-        console.log('데이터가 성공적으로 저장되었습니다.');
-      }
-    });
-    stmt.finalize();
-  } catch (error) {
-    console.error('API 호출 오류:', error);
+    const response = await axios.get(url);
+    res.json(response.data);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to fetch weather data" });
   }
-};
+});
 
-// 데이터베이스에서 데이터를 가져와 엑셀 파일로 저장하는 함수
-const exportDataToExcel = () => {
-  db.all('SELECT * FROM weather_data', (err, rows) => {
-    if (err) {
-      console.error('데이터베이스 조회 오류:', err.message);
-    } else {
-      // 엑셀 파일로 변환
-      const worksheet = xlsx.utils.json_to_sheet(rows);
-      const workbook = xlsx.utils.book_new();
-      xlsx.utils.book_append_sheet(workbook, worksheet, 'Weather Data');
+// app.js (또는 routes/api.js)
+app.get('/api/weather/all', async (req, res) => {
+  const apiKey = process.env.OPENWEATHERMAP_API_KEY;
 
-      // 엑셀 파일 저장
-      const filePath = './weather_data.xlsx';
-      xlsx.writeFile(workbook, filePath);
+  const cityIds = [
+    1835848, // 서울
+    1838524, // 부산
+    1835329, // 대구
+    1843564, // 인천
+    1841811, // 광주
+    1835235, // 대전
+    1833747, // 울산
+    1835553, // 수원
+    1846326, // 창원
+    1846266  // 제주
+  ];
 
-      console.log(`엑셀 파일이 생성되었습니다: ${filePath}`);
-    }
+  const url = `https://api.openweathermap.org/data/2.5/group?id=${cityIds.join(',')}&appid=${apiKey}&units=metric`;
+
+  try {
+    const response = await axios.get(url);
+    res.json(response.data); // 응답을 그대로 보내줌
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch national weather data" });
+  }
+});
+
+
+app.get('/api/recommend', (req, res) => {
+  const { city, weather } = req.query;
+
+  const sql = `
+    SELECT name, city, latitude, longitude, category
+    FROM destinations
+    WHERE city = ? AND recommended_weather = ?
+  `;
+
+  db.all(sql, [city, weather], (err, rows) => {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json(rows);
   });
-};
-
-// Express 라우트 설정
-app.get('/', (req, res) => {
-  res.send('날씨 데이터 API 호출 및 저장 예시');
 });
 
-// 데이터베이스에서 날씨 데이터를 가져오는 라우트
-app.get('/weather', (req, res) => {
-  db.all('SELECT * FROM weather_data', (err, rows) => {
-    if (err) {
-      console.error('데이터베이스 조회 오류:', err.message);
-      res.status(500).send('데이터베이스 오류');
-    } else {
-      res.json(rows);
-    }
-  });
-});
-
-// 엑셀로 데이터 내보내기
-app.get('/export', (req, res) => {
-  exportDataToExcel();
-  res.send('엑셀 파일로 데이터를 내보내는 중입니다.');
-});
-
-
-// 서버 시작
-app.listen(port, () => {
-  console.log(`서버가 http://localhost:${port} 에서 실행 중입니다.`);
-
-  // 서버 시작 시 API를 호출하고 데이터를 저장
-  fetchAndSaveWeatherData();
+app.listen(PORT, () => {
+  console.log(`✅ 서버 실행 중: http://localhost:${PORT}`);
 });
