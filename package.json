@@ -1,0 +1,19 @@
+{
+  "name": "weathertrip_pjt",
+  "version": "1.0.0",
+  "description": "* 첫째날 api 가져오기",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.8.4",
+    "exceljs": "^4.4.0",
+    "express": "^4.21.2",
+    "sqlite3": "^5.1.7",
+    "xlsx": "^0.18.5"
+  }
+}
