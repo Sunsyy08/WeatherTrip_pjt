@@ -1,0 +1,54 @@
+날짜
+시간
+테마
+지역
+관광 어디인지
+날씨
+2521f0e5b9518620e62ad2b317822374
+https://api.openweathermap.org/data/2.5/weather?q=Seoul&appid=2521f0e5b9518620e62ad2b317822374&units=metric
+ 사용자 위치 자동 감지 (Geolocation API)
+
+ 날짜/시간 선택 UI 만들기
+
+ 마커에 여행지 설명, 주소, 이미지 등 추가
+
+ 카테고리별 필터 (ex: 음식점만 보기)
+
+✅ 다음에 할 수 있는 기능들 — 골라봐!
+1. 🧭 현재 위치 기반 자동 추천
+사용자 브라우저에서 위치(GPS)를 받아서
+
+현재 위치 날씨 기반으로 자동 추천
+
+"내 주변에서 지금 갈만한 곳" 느낌!
+
+2. 📅 추천 코스 만들기
+추천된 여행지를 기반으로
+
+시간대별 or 거리순으로 코스를 자동 생성
+
+예: 오전엔 공원 → 점심은 맛집 → 오후엔 전시회
+
+3. ❤️ 즐겨찾기 저장 기능
+추천된 장소에서 "⭐ 저장" 버튼 클릭
+
+나중에 모아볼 수 있는 기능 (브라우저 localStorage or DB)
+
+4. 🎯 카테고리 필터링 기능
+음식점, 관광지, 축제 등만 선택해서 볼 수 있게
+
+<select multiple> 또는 체크박스로 구현 가능
+
+5. 📸 장소 상세정보 보기
+마커 클릭 시 → 이름 외에 설명, 이미지, 주소 등 표시
+
+한국관광공사 상세 API 연동 필요 (별도 API 호출)
+
+6. 🖼️ 날씨에 따라 배경 스타일 바꾸기
+날씨가 "Clear"면 맑은 배경 / "Rain"이면 흐린 배경
+
+UX 향상 + 감성 추가 효과!
+
+
+https://apis.data.go.kr/B551011/KorService1/detailImage1?serviceKey=https://apis.data.go.kr/B551011/KorService1/detailImage1?serviceKey=인코딩된키&MobileOS=ETC&MobileApp=WeatherTrip&_type=json&contentId=1095732&imageYN=Y
+&MobileOS=ETC&MobileApp=WeatherTrip&_type=json&contentId=1095732&imageYN=Y

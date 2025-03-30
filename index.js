@@ -224,24 +224,21 @@ app.get('/api/getImage', async (req, res) => {
 
     const response = await axios.get(url);
     const rawItems = response.data?.response?.body?.items;
-
-    console.log('✅ 이미지 API 응답:', JSON.stringify(rawItems, null, 2));
+    const item = rawItems?.item;
 
     let imageUrl = null;
 
-    // ✅ 이미지 추출 로직
-    if (rawItems?.item) {
-      const item = rawItems.item;
-
-      if (Array.isArray(item) && item.length > 0 && item[0].originimgurl) {
-        imageUrl = item[0].originimgurl;
-      } else if (typeof item === 'object' && item.originimgurl) {
-        imageUrl = item.originimgurl;
-      }
+    if (Array.isArray(item) && item.length > 0 && item[0].originimgurl) {
+      imageUrl = item[0].originimgurl;
+    } else if (typeof item === 'object' && item.originimgurl) {
+      imageUrl = item.originimgurl;
     }
 
-    if (!imageUrl) {
-      console.warn('❌ originimgurl이 없음!');
+    // ✅ 여기에 이 부분 추가하세요!!
+    if (!imageUrl && Array.isArray(item) && item.length > 0) {
+      const serialnum = item[0].serialnum;
+      const filePart = serialnum.split('_')[0];
+      imageUrl = `http://tong.visitkorea.or.kr/cms/resource/${filePart.slice(-2)}/${filePart}_image2_1.jpg`;
     }
 
     res.json({ imageUrl });
@@ -250,9 +247,6 @@ app.get('/api/getImage', async (req, res) => {
     res.status(500).json({ error: '이미지 API 호출 실패' });
   }
 });
-
-
-
 
 
 
