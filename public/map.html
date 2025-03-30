@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>날씨 기반 여행지 추천 지도</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    #map {
+      width: 100%;
+      height: 100vh;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // ✅ 지도 초기화
+    const map = L.map('map').setView([37.5665, 126.9780], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // ✅ 카테고리 코드 → 한글명 매핑
+    const categoryMap = {
+      "12": "관광지",
+      "14": "문화시설",
+      "15": "축제/공연/행사",
+      "25": "여행코스",
+      "28": "레포츠",
+      "32": "숙박",
+      "38": "쇼핑",
+      "39": "음식점"
+    };
+
+    // ✅ 테스트용 값 (서울 기준, 미래 시간)
+    const lat = 37.5665;
+    const lon = 126.9780;
+    const datetime = '2025-04-01T14:30';
+    const city = '서울';
+
+    // ✅ 예보 기반 추천 API 호출
+    fetch(`/api/recommendByForecast?lat=${lat}&lon=${lon}&datetime=${datetime}&city=${city}`)
+      .then(res => res.json())
+      .then(data => {
+        const places = data.recommended_places;
+
+        places.forEach(place => {
+          const cat = categoryMap[place.category] || "기타";
+          const marker = L.marker([place.latitude, place.longitude]).addTo(map);
+          marker.bindPopup(`<b>${place.name}</b><br/>카테고리: ${cat}`);
+        });
+
+        // ✅ 콘솔 확인용
+        console.log(`예보 시간: ${data.forecast_time}, 날씨: ${data.weather}, 기온: ${data.temp}°C`);
+      })
+      .catch(err => {
+        console.error('추천 실패:', err);
+      });
+  </script>
+
+</body>
+</html>

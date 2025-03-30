@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>날씨 기반 여행지 추천 서비스</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+    #form-container {
+      padding: 20px;
+      background: #f2f2f2;
+    }
+    .form-group {
+      margin-bottom: 10px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input, select {
+      padding: 8px;
+      width: 200px;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #map {
+      width: 100%;
+      height: calc(100vh - 150px);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="form-container">
+    <h1>여행지 추천 받기</h1>
+    <div class="form-group">
+      <label for="city">도시 선택:</label>
+      <select id="city">
+        <option value="서울">서울</option>
+        <option value="부산">부산</option>
+        <option value="대구">대구</option>
+        <option value="인천">인천</option>
+        <option value="광주">광주</option>
+        <option value="대전">대전</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label for="datetime">날짜 및 시간 선택:</label>
+      <input type="datetime-local" id="datetime" />
+    </div>
+    <div class="form-group">
+      <button id="getRecommendations">추천 받기</button>
+    </div>
+  </div>
+
+  <div id="weather-info" style="padding: 10px; font-size: 16px;">
+    <!-- 예보 날씨가 여기에 표시됩니다 -->
+  </div>
+
+  <div id="map"></div>
+
+  <!-- Leaflet JS 라이브러리 -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // 지도 초기화
+    const map = L.map('map').setView([37.5665, 126.9780], 11);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // 마커 관리용 레이어 그룹 생성
+    const markerLayer = L.layerGroup().addTo(map);
+
+    // 카테고리 코드 → 한글 매핑
+    const categoryMap = {
+      "12": "관광지",
+      "14": "문화시설",
+      "15": "축제/공연/행사",
+      "25": "여행코스",
+      "28": "레포츠",
+      "32": "숙박",
+      "38": "쇼핑",
+      "39": "음식점"
+    };
+
+    // 도시별 좌표
+    function getCityCoordinates(city) {
+      switch(city) {
+        case '서울': return [37.5665, 126.9780];
+        case '부산': return [35.1796, 129.0756];
+        case '대구': return [35.8714, 128.6014];
+        case '인천': return [37.4563, 126.7052];
+        case '광주': return [35.1595, 126.8526];
+        case '대전': return [36.3504, 127.3845];
+        default: return [37.5665, 126.9780];
+      }
+    }
+
+    // 추천 API 호출 및 지도 업데이트 함수
+    function getRecommendations() {
+      const city = document.getElementById('city').value;
+      const datetimeInput = document.getElementById('datetime').value;
+      
+      if (!datetimeInput) {
+        alert('날짜와 시간을 선택해주세요.');
+        return;
+      }
+
+      const datetime = datetimeInput;
+      const [lat, lon] = getCityCoordinates(city);
+      const apiUrl = `/api/recommendByForecast?lat=${lat}&lon=${lon}&datetime=${datetime}&city=${city}`;
+
+      fetch(apiUrl)
+        .then(res => res.json())
+        .then(data => {
+          // 날씨 정보 표시
+          document.getElementById('weather-info').innerHTML = `
+            <b>예보 시간:</b> ${data.forecast_time}<br/>
+            <b>날씨 상태:</b> ${data.weather}<br/>
+            <b>기온:</b> ${data.temp.toFixed(1)}°C
+          `;
+
+          markerLayer.clearLayers();
+
+          data.recommended_places.forEach(place => {
+  const cat = categoryMap[place.category] || "기타";
+  const marker = L.marker([place.latitude, place.longitude]);
+
+  marker.on('click', function () {
+    console.log('📍 contentid:', place.contentid);  // ✅ 이거 찍히는지 확인
+    fetch(`/api/getImage?contentid=${place.contentid}`)
+      .then(res => res.json())
+      .then(imgData => {
+        const imageTag = imgData.imageUrl
+          ? `<img src="${imgData.imageUrl}" alt="${place.name}" style="width:220px; max-height:150px; margin-top:5px;" />`
+          : `<div style="margin-top:5px;">이미지가 없습니다</div>`;
+
+        marker.bindPopup(
+          `<b>${place.name}</b><br/>
+           카테고리: ${cat}<br/>
+           ${imageTag}`
+        ).openPopup();
+      })
+      .catch(err => {
+        console.error('이미지 조회 실패:', err);
+        marker.bindPopup(`<b>${place.name}</b><br/>카테고리: ${cat}`).openPopup();
+      });
+  });
+
+  markerLayer.addLayer(marker);
+});
+
+
+          map.setView([lat, lon], 12);
+        })
+        .catch(err => {
+          console.error('추천 API 호출 실패:', err);
+        });
+    }
+
+    // 버튼 이벤트 연결
+    document.getElementById('getRecommendations').addEventListener('click', getRecommendations);
+  </script>
+</body>
+</html>
