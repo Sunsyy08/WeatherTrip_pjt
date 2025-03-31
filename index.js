@@ -301,6 +301,33 @@ app.post('/login', (req, res) => {
 // -----------------------------------------------------------------
 
 // 1. 전체 게시글 조회 (GET /articles)
+//    - 로그인한 사용자만 볼 수 있도록 authenticateToken 미들웨어 사용
+app.get('/articles', authenticateToken, (req, res) => {
+  // comments 테이블 + users 테이블 조인: 댓글 ID, 작성자 이메일, 등등
+  const sql = `
+    SELECT 
+      c.id, 
+      c.title, 
+      c.content,
+      c.contentid,
+      c.timestamp,   -- 만약 comments 테이블에 timestamp 칼럼이 있다면
+      u.email AS author
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    ORDER BY c.id DESC
+  `;
+
+  db.all(sql, [], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: '게시글 조회 실패', details: err.message });
+    }
+    // rows = [ { id: 1, title: '...', content: '...', contentid: '1234', timestamp: '...', author: 'xxx@xxx' }, ... ]
+    res.json(rows);
+  });
+});
+
+
+// 1. 전체 게시글 조회 (GET /articles)
 //    - comments 테이블에서 게시글을 조회하며, 작성자(email) 정보를 users 테이블과 조인
 app.post('/articles', authenticateToken, (req, res) => {
   const { title, content, contentid } = req.body;

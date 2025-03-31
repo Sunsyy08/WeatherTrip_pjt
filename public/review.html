@@ -48,6 +48,13 @@
 
     <form id="review-form" style="display: none;">
       <h2>후기 작성</h2>
+      <!-- DB PK와 contentid 표시 -->
+      <p>
+        <strong>관광지 PK (DB id): </strong>
+        <span id="db-id-display">---</span><br>
+        <strong>공공데이터 contentid: </strong>
+        <span id="contentid-display">---</span>
+      </p>
       <div class="form-group">
         <label for="title">제목</label>
         <input type="text" id="title" required>
@@ -61,58 +68,82 @@
   </div>
 
   <script>
-    // URL 쿼리스트링에서 contentid 추출
-    function getContentId() {
-      const params = new URLSearchParams(window.location.search);
-      return params.get('contentid');
+    // -----------------------------
+    // 1) 쿼리스트링에서 destId(DB PK), contentid(공공데이터 식별자) 추출
+    // -----------------------------
+    function getQueryParam(key) {
+      return new URLSearchParams(window.location.search).get(key);
     }
-    const contentid = getContentId();
+    const destId = getQueryParam('destId');       // DB상의 PK (예: destinations.id)
+    const contentid = getQueryParam('contentid'); // 공공데이터 API 식별자
 
-    // JWT 토큰 (로그인 시 localStorage에 저장)
+    // -----------------------------
+    // 2) JWT 토큰 (로그인 시 localStorage에 저장)
+    // -----------------------------
     const token = localStorage.getItem('token');
 
-    // contentid가 없으면 닫기
+    // -----------------------------
+    // 3) contentid 없으면 페이지 닫기
+    // -----------------------------
     if (!contentid) {
       alert('contentid가 없습니다.');
       window.close();
     }
+
+    // -----------------------------
+    // 4) 화면에 DB PK와 contentid 표시
+    // -----------------------------
+    document.getElementById('db-id-display').textContent = destId || '(없음)';
+    document.getElementById('contentid-display').textContent = contentid;
 
     // DOM 요소 참조
     const reviewList = document.getElementById('review-list');
     const form = document.getElementById('review-form');
     const authWarning = document.getElementById('auth-warning');
 
-    // 로그인 여부에 따라 폼 표시 or 경고문 표시
+    // -----------------------------
+    // 5) 로그인 여부에 따라 폼 표시 or 경고문 표시
+    // -----------------------------
     if (token) {
       form.style.display = 'block';
     } else {
       authWarning.style.display = 'block';
     }
 
-    // 후기 목록 불러오기
+    // -----------------------------
+    // 6) 후기 목록 불러오기 (GET /articles)
+    //    => 백엔드에서 전체 후기 목록을 가져오고, contentid 기준으로 필터링
+    // -----------------------------
     function loadReviews() {
-      // 로그인한 사용자만 GET /articles 사용 (headers에 토큰)
       fetch('/articles', {
         method: 'GET',
         headers: {
           Authorization: 'Bearer ' + token
         }
       })
-      .then(res => res.json())
+      .then(res => {
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+        return res.json();
+      })
       .then(data => {
+        // data: [{ id, title, content, contentid, timestamp, author }, ...]
         reviewList.innerHTML = '';
-        // contentid로 필터링
+
+        // 6-1) contentid로 필터링
         const filtered = data.filter(r => r.contentid == contentid);
 
         if (filtered.length === 0) {
           reviewList.innerHTML = '<p>등록된 후기가 없습니다.</p>';
         } else {
+          // 6-2) 후기 목록 표시
           filtered.forEach(r => {
             const div = document.createElement('div');
             div.className = 'review-item';
             div.innerHTML = `
               <strong>${r.title}</strong> 
-              <small>(${r.timestamp})</small><br/>
+              <small>(댓글 ID: ${r.id}${r.timestamp ? ', ' + r.timestamp : ''})</small><br/>
               <p>${r.content}</p>
               <small>작성자: ${r.author || '익명'}</small>
             `;
@@ -127,13 +158,17 @@
     }
     loadReviews();
 
-    // 후기 작성 폼 제출 처리
+    // -----------------------------
+    // 7) 후기 작성 폼 제출 처리 (POST /articles)
+    //    => body에 { title, content, contentid }를 담아 보냄
+    // -----------------------------
     form.addEventListener('submit', function (e) {
       e.preventDefault();
       const title = document.getElementById('title').value;
       const content = document.getElementById('content').value;
 
-      // POST /articles
+      console.log('[디버그] 후기 등록 요청 - contentid:', contentid, 'destId:', destId);
+
       fetch('/articles', {
         method: 'POST',
         headers: {
@@ -149,6 +184,7 @@
         } else {
           alert('후기 등록 완료!');
           form.reset();
+          // 다시 불러오기
           loadReviews();
         }
       })
