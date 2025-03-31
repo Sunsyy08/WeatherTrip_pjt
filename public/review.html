@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>관광지 후기</title>
+  <style>
+    body { font-family: sans-serif; background: #f5f5f5; padding: 20px; }
+    .container {
+      max-width: 600px; 
+      margin: auto; 
+      background: white; 
+      padding: 20px; 
+      border-radius: 6px; 
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    h1, h2 { text-align: center; }
+    .review-item { border-bottom: 1px solid #ddd; padding: 10px 0; }
+    .review-item:last-child { border-bottom: none; }
+    form { margin-top: 30px; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; }
+    input, textarea {
+      width: 100%; 
+      padding: 8px; 
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 20px;
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    button:hover { background: #0056b3; }
+    #auth-warning { 
+      color: red; 
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>관광지 후기</h1>
+
+    <div id="review-list"><!-- 후기 목록 표시 --></div>
+    <div id="auth-warning" style="display: none;">※ 로그인 후 후기를 작성할 수 있습니다.</div>
+
+    <form id="review-form" style="display: none;">
+      <h2>후기 작성</h2>
+      <div class="form-group">
+        <label for="title">제목</label>
+        <input type="text" id="title" required>
+      </div>
+      <div class="form-group">
+        <label for="content">내용</label>
+        <textarea id="content" rows="4" required></textarea>
+      </div>
+      <button type="submit">후기 등록</button>
+    </form>
+  </div>
+
+  <script>
+    // URL 쿼리스트링에서 contentid 추출
+    function getContentId() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('contentid');
+    }
+    const contentid = getContentId();
+
+    // JWT 토큰 (로그인 시 localStorage에 저장)
+    const token = localStorage.getItem('token');
+
+    // contentid가 없으면 닫기
+    if (!contentid) {
+      alert('contentid가 없습니다.');
+      window.close();
+    }
+
+    // DOM 요소 참조
+    const reviewList = document.getElementById('review-list');
+    const form = document.getElementById('review-form');
+    const authWarning = document.getElementById('auth-warning');
+
+    // 로그인 여부에 따라 폼 표시 or 경고문 표시
+    if (token) {
+      form.style.display = 'block';
+    } else {
+      authWarning.style.display = 'block';
+    }
+
+    // 후기 목록 불러오기
+    function loadReviews() {
+      // 로그인한 사용자만 GET /articles 사용 (headers에 토큰)
+      fetch('/articles', {
+        method: 'GET',
+        headers: {
+          Authorization: 'Bearer ' + token
+        }
+      })
+      .then(res => res.json())
+      .then(data => {
+        reviewList.innerHTML = '';
+        // contentid로 필터링
+        const filtered = data.filter(r => r.contentid == contentid);
+
+        if (filtered.length === 0) {
+          reviewList.innerHTML = '<p>등록된 후기가 없습니다.</p>';
+        } else {
+          filtered.forEach(r => {
+            const div = document.createElement('div');
+            div.className = 'review-item';
+            div.innerHTML = `
+              <strong>${r.title}</strong> 
+              <small>(${r.timestamp})</small><br/>
+              <p>${r.content}</p>
+              <small>작성자: ${r.author || '익명'}</small>
+            `;
+            reviewList.appendChild(div);
+          });
+        }
+      })
+      .catch(err => {
+        console.error('후기 불러오기 실패:', err);
+        reviewList.innerHTML = '<p>후기를 불러오는 데 실패했습니다.</p>';
+      });
+    }
+    loadReviews();
+
+    // 후기 작성 폼 제출 처리
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const title = document.getElementById('title').value;
+      const content = document.getElementById('content').value;
+
+      // POST /articles
+      fetch('/articles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer ' + token
+        },
+        body: JSON.stringify({ title, content, contentid })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          alert('후기 등록 실패: ' + data.error);
+        } else {
+          alert('후기 등록 완료!');
+          form.reset();
+          loadReviews();
+        }
+      })
+      .catch(err => {
+        console.error('후기 등록 오류:', err);
+      });
+    });
+  </script>
+</body>
+</html>

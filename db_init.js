@@ -32,20 +32,21 @@ db.serialize(() => {
 db.serialize(() => {
   // (기존 destinations, users 테이블은 유지)
 
-  // ✅ comments 테이블 생성
-  db.run(`DROP TABLE IF EXISTS comments`);
-  db.run(`
-    CREATE TABLE IF NOT EXISTS comments (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      title TEXT NOT NULL,
-      content TEXT NOT NULL,
-      user_id INTEGER NOT NULL,
-      timestamp TEXT DEFAULT (datetime('now', 'localtime')),
-      FOREIGN KEY (user_id) REFERENCES users(id)
-    )
-  `);
+// comments 테이블 재생성 (후기용)
+db.run(`DROP TABLE IF EXISTS comments`);
+db.run(`
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    contentid INTEGER NOT NULL, -- 관광지 고유번호 추가됨!
+    timestamp DATETIME DEFAULT (datetime('now','localtime')),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+  )
+`);
+console.log('✅ comments 테이블 재생성 완료 (contentid 포함)');
 
-  console.log('✅ comments 테이블 생성 완료');
 });
 
 db.close();

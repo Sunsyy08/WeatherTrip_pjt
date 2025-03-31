@@ -302,20 +302,20 @@ app.post('/login', (req, res) => {
 
 // 1. 전체 게시글 조회 (GET /articles)
 //    - comments 테이블에서 게시글을 조회하며, 작성자(email) 정보를 users 테이블과 조인
-app.get('/articles', authenticateToken, (req, res) => {
-  const sql = `
-    SELECT comments.id, comments.title, comments.content, comments.timestamp, users.email AS author
-    FROM comments
-    JOIN users ON comments.user_id = users.id
-    ORDER BY comments.timestamp DESC
-  `;
-  db.all(sql, (err, rows) => {
+app.post('/articles', authenticateToken, (req, res) => {
+  const { title, content, contentid } = req.body;
+  const userId = req.user.id;
+
+  // DB에 contentid까지 넣어야 함
+  const sql = `INSERT INTO comments (title, content, user_id, contentid) VALUES (?, ?, ?, ?)`;
+  db.run(sql, [title, content, userId, contentid], function(err) {
     if (err) {
-      return res.status(500).json({ error: '게시글 조회 실패', details: err.message });
+      return res.status(500).json({ error: '후기 작성 실패', details: err.message });
     }
-    res.json(rows);
+    res.status(201).json({ message: '후기 작성 완료', articleId: this.lastID });
   });
 });
+
 
 // 2. 게시글 작성 (POST /articles)
 //    - 로그인한 사용자만 작성 가능하며, 작성 시 토큰에 담긴 user_id를 함께 저장
