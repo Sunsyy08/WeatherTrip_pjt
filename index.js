@@ -1,10 +1,14 @@
 // app.js
 require('dotenv').config();
 const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
 const axios = require('axios');
 const app = express();
 const sqlite3 = require('sqlite3').verbose();
 const db = new sqlite3.Database('travel.db');
+const SECRET_KEY = process.env.JWT_SECRET;
+app.use(express.json()); // ✅ 이 줄이 반드시 있어야 함!
 
 
 const PORT = 3000;
@@ -249,7 +253,44 @@ app.get('/api/getImage', async (req, res) => {
 });
 
 
+// ✅ 회원가입
+app.post('/users', async (req, res) => {
+  const { email, password } = req.body;
 
+  try {
+    const hashed = await bcrypt.hash(password, 10);
+
+    db.run('INSERT INTO users (email, password) VALUES (?, ?)', [email, hashed], function (err) {
+      if (err) {
+        return res.status(400).json({ error: '회원가입 실패', details: err.message });
+      }
+
+      res.status(201).json({ message: '회원가입 성공', userId: this.lastID });
+    });
+  } catch (err) {
+    res.status(500).json({ error: '서버 오류', details: err.message });
+  }
+});
+
+// ✅ 로그인
+app.post('/login', (req, res) => {
+  const { email, password } = req.body;
+
+  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
+    if (err || !user) {
+      return res.status(401).json({ error: '이메일을 찾을 수 없습니다' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ error: '비밀번호가 일치하지 않습니다' });
+    }
+
+    const token = jwt.sign({ id: user.id, email: user.email }, SECRET_KEY, { expiresIn: '1h' });
+
+    res.json({ message: '로그인 성공', token });
+  });
+});
 
 app.listen(PORT, () => {
   console.log(`✅ 서버 실행 중: http://localhost:${PORT}`);

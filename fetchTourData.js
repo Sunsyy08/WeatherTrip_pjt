@@ -41,8 +41,15 @@ async function fetchAndInsert(areaCode, areaName) {
 
     try {
       const response = await axios.get(url);
-      const items = response.data.response.body.items?.item || [];
-      const total = response.data.response.body.totalCount || 0;
+      const body = response?.data?.response?.body;
+
+      if (!body || !body.items) {
+        console.warn(`⚠️ ${areaName}(${page}) 응답이 비어 있거나 형식이 다릅니다.`);
+        break;
+      }
+
+      const items = body.items.item || [];
+      const total = body.totalCount || 0;
 
       if (items.length === 0) break;
 
@@ -73,7 +80,7 @@ async function fetchAndInsert(areaCode, areaName) {
       page++;
 
     } catch (err) {
-      console.error(`❌ ${areaName}(${areaCode}) 실패:`, err.message);
+      console.error(`❌ ${areaName}(${page}) 실패: ${err.message}`);
       break;
     }
   }
