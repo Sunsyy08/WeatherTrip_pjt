@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>회원가입 - 날씨 기반 여행지 추천 서비스</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+    }
+    .container {
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+      position: relative;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #28a745;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #218838;
+    }
+    .toggle-password {
+      position: absolute;
+      top: 35px;
+      right: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .link {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .link a {
+      text-decoration: none;
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>회원가입</h1>
+    <form id="signup-form">
+      <div class="form-group">
+        <label for="signup-email">이메일</label>
+        <input type="email" id="signup-email" required>
+      </div>
+      <div class="form-group">
+        <label for="signup-password">비밀번호</label>
+        <input type="password" id="signup-password" required>
+        <span class="toggle-password" id="toggle-signup-password">👁️</span>
+      </div>
+      <button type="submit">회원가입</button>
+    </form>
+    <div class="link">
+      이미 계정이 있으신가요? <a href="login.html">로그인하기</a>
+    </div>
+    <div id="signup-message" style="color:red; text-align: center; margin-top:10px;"></div>
+  </div>
+  <script>
+    // 비밀번호 보이기 토글 기능
+    const toggleSignupPassword = document.getElementById('toggle-signup-password');
+    const signupPasswordField = document.getElementById('signup-password');
+    toggleSignupPassword.addEventListener('click', function() {
+      if (signupPasswordField.type === 'password') {
+        signupPasswordField.type = 'text';
+        toggleSignupPassword.textContent = '🙈';
+      } else {
+        signupPasswordField.type = 'password';
+        toggleSignupPassword.textContent = '👁️';
+      }
+    });
+
+    // 회원가입 처리
+    document.getElementById('signup-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('signup-email').value;
+      const password = document.getElementById('signup-password').value;
+
+      fetch('/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('signup-message').innerText = data.error + ': ' + (data.details || '');
+        } else {
+          document.getElementById('signup-message').innerText = '회원가입 성공! 로그인 해주세요.';
+          setTimeout(() => {
+            window.location.href = 'login.html';
+          }, 1500);
+        }
+      })
+      .catch(err => {
+        document.getElementById('signup-message').innerText = '오류 발생: ' + err.message;
+      });
+    });
+  </script>
+</body>
+</html>

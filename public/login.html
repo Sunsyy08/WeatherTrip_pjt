@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>로그인 - 날씨 기반 여행지 추천 서비스</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f9f9f9;
+    }
+    .container {
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 20px;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 15px;
+      position: relative;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .toggle-password {
+      position: absolute;
+      top: 35px;
+      right: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .link {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .link a {
+      text-decoration: none;
+      color: #007bff;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>로그인</h1>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="login-email">이메일</label>
+        <input type="email" id="login-email" required>
+      </div>
+      <div class="form-group">
+        <label for="login-password">비밀번호</label>
+        <input type="password" id="login-password" required>
+        <span class="toggle-password" id="toggle-password">👁️</span>
+      </div>
+      <button type="submit">로그인</button>
+    </form>
+    <div class="link">
+      아직 계정이 없으신가요? <a href="signup.html">회원가입하기</a>
+    </div>
+    <div id="login-message" style="color:red; text-align: center; margin-top:10px;"></div>
+  </div>
+  <script>
+    // 비밀번호 보이기 토글 기능
+    const togglePassword = document.getElementById('toggle-password');
+    const passwordField = document.getElementById('login-password');
+    togglePassword.addEventListener('click', function() {
+      if (passwordField.type === 'password') {
+        passwordField.type = 'text';
+        togglePassword.textContent = '🙈';
+      } else {
+        passwordField.type = 'password';
+        togglePassword.textContent = '👁️';
+      }
+    });
+
+    // 로그인 처리
+    document.getElementById('login-form').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+
+      fetch('/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.error) {
+          document.getElementById('login-message').innerText = data.error + ': ' + (data.details || '');
+        } else {
+          document.getElementById('login-message').innerText = '로그인 성공!';
+          localStorage.setItem('token', data.token);
+          // 로그인 성공 후 메인 페이지로 이동
+          window.location.href = 'index.html';
+        }
+      })
+      .catch(err => {
+        document.getElementById('login-message').innerText = '오류 발생: ' + err.message;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -10,6 +10,22 @@
       margin: 0;
       padding: 0;
     }
+    /* 헤더 스타일 */
+    header {
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+    }
+    header a {
+      color: white;
+      text-decoration: none;
+      font-weight: bold;
+      margin-left: 10px;
+    }
+    /* 기존 폼 컨테이너 */
     #form-container {
       padding: 20px;
       background: #f2f2f2;
@@ -42,7 +58,10 @@
   </style>
 </head>
 <body>
-
+  <header>
+    <a href="login.html">로그인</a>
+  </header>
+  
   <div id="form-container">
     <h1>여행지 추천 받기</h1>
     <div class="form-group">
@@ -65,10 +84,7 @@
     </div>
   </div>
 
-  <div id="weather-info" style="padding: 10px; font-size: 16px;">
-    <!-- 예보 날씨가 여기에 표시됩니다 -->
-  </div>
-
+  <div id="weather-info" style="padding: 10px; font-size: 16px;"></div>
   <div id="map"></div>
 
   <!-- Leaflet JS 라이브러리 -->
@@ -135,33 +151,30 @@
           markerLayer.clearLayers();
 
           data.recommended_places.forEach(place => {
-  const cat = categoryMap[place.category] || "기타";
-  const marker = L.marker([place.latitude, place.longitude]);
+            const cat = categoryMap[place.category] || "기타";
+            const marker = L.marker([place.latitude, place.longitude]);
 
-  marker.on('click', function () {
-    console.log('📍 contentid:', place.contentid);  // ✅ 이거 찍히는지 확인
-    fetch(`/api/getImage?contentid=${place.contentid}`)
-      .then(res => res.json())
-      .then(imgData => {
-        const imageTag = imgData.imageUrl
-          ? `<img src="${imgData.imageUrl}" alt="${place.name}" style="width:220px; max-height:150px; margin-top:5px;" />`
-          : `<div style="margin-top:5px;">이미지가 없습니다</div>`;
+            marker.on('click', function () {
+              fetch(`/api/getImage?contentid=${place.contentid}`)
+                .then(res => res.json())
+                .then(imgData => {
+                  const imageTag = imgData.imageUrl
+                    ? `<img src="${imgData.imageUrl}" alt="${place.name}" style="width:220px; max-height:150px; margin-top:5px;" />`
+                    : `<div style="margin-top:5px;">이미지가 없습니다</div>`;
+                  marker.bindPopup(
+                    `<b>${place.name}</b><br/>
+                     카테고리: ${cat}<br/>
+                     ${imageTag}`
+                  ).openPopup();
+                })
+                .catch(err => {
+                  console.error('이미지 조회 실패:', err);
+                  marker.bindPopup(`<b>${place.name}</b><br/>카테고리: ${cat}`).openPopup();
+                });
+            });
 
-        marker.bindPopup(
-          `<b>${place.name}</b><br/>
-           카테고리: ${cat}<br/>
-           ${imageTag}`
-        ).openPopup();
-      })
-      .catch(err => {
-        console.error('이미지 조회 실패:', err);
-        marker.bindPopup(`<b>${place.name}</b><br/>카테고리: ${cat}`).openPopup();
-      });
-  });
-
-  markerLayer.addLayer(marker);
-});
-
+            markerLayer.addLayer(marker);
+          });
 
           map.setView([lat, lon], 12);
         })
@@ -170,7 +183,6 @@
         });
     }
 
-    // 버튼 이벤트 연결
     document.getElementById('getRecommendations').addEventListener('click', getRecommendations);
   </script>
 </body>
