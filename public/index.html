@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8">
   <title>날씨 기반 여행지 추천 서비스</title>
@@ -17,6 +18,7 @@
       padding: 10px 20px;
       text-align: right;
     }
+
     header a {
       color: #fff;
       text-decoration: none;
@@ -29,18 +31,22 @@
       padding: 20px;
       background: #f2f2f2;
     }
+
     .form-group {
       margin-bottom: 10px;
     }
+
     label {
       display: block;
       margin-bottom: 5px;
     }
+
     input,
     select {
       padding: 8px;
       width: 200px;
     }
+
     button {
       padding: 10px 20px;
       background: #007bff;
@@ -48,25 +54,28 @@
       border: none;
       cursor: pointer;
     }
+
     button:hover {
       background: #0056b3;
     }
+
     #map {
       width: 100%;
       height: calc(100vh - 150px);
     }
 
-    /* 후기 모달 */
+    /* 후기 모달 (후기 보기/작성) */
     #review-modal {
       display: none;
       position: fixed;
-      top: 0; 
+      top: 0;
       left: 0;
-      width: 100%; 
+      width: 100%;
       height: 100%;
       background: rgba(0, 0, 0, 0.5);
       z-index: 9999;
     }
+
     #review-modal .modal-content {
       position: relative;
       width: 80%;
@@ -78,9 +87,11 @@
       max-height: 80vh;
       overflow-y: auto;
     }
+
     #review-modal h2 {
       margin-top: 0;
     }
+
     #review-list {
       border: 1px solid #ccc;
       padding: 10px;
@@ -88,6 +99,7 @@
       overflow-y: auto;
       margin-bottom: 20px;
     }
+
     #review-modal .close-btn {
       background: #dc3545;
       color: white;
@@ -95,11 +107,90 @@
       padding: 8px 16px;
       cursor: pointer;
     }
+
     #review-modal .close-btn:hover {
       background: #c82333;
     }
+
+    /* 후기 수정 모달 */
+    #edit-review-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 10000;
+    }
+
+    #edit-review-modal .modal-content {
+      position: relative;
+      width: 80%;
+      max-width: 600px;
+      margin: 50px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 4px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #edit-review-modal h2 {
+      margin-top: 0;
+    }
+
+    #edit-review-modal .form-group {
+      margin-bottom: 10px;
+    }
+
+    #edit-review-modal label {
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    #edit-review-modal input,
+    #edit-review-modal textarea {
+      padding: 8px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    /* 수정/삭제 모달 전용 버튼 스타일 */
+    #edit-review-modal .edit-btn {
+      background-color: #28a745;
+      /* 녹색 */
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      margin-right: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #edit-review-modal .delete-btn {
+      background-color: #dc3545;
+      /* 빨강 */
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      margin-right: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #edit-review-modal .cancel-btn {
+      background-color: #6c757d;
+      /* 회색 */
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
   </style>
 </head>
+
 <body>
 
   <!-- ───────── 상단 헤더 (로그인 버튼) ───────── -->
@@ -136,7 +227,7 @@
   <!-- 지도 표시 영역 -->
   <div id="map"></div>
 
-  <!-- 후기 모달 -->
+  <!-- 후기 모달 (후기 보기/작성) -->
   <div id="review-modal">
     <div class="modal-content">
       <h2>관광지 후기</h2>
@@ -146,7 +237,7 @@
       <h3>후기 작성</h3>
       <form id="review-form">
         <!-- contentid는 hidden 필드에 저장 -->
-        <input type="hidden" id="review-contentid">
+        <input id="review-contentid" type="hidden">
         <div class="form-group">
           <label for="review-title">제목</label>
           <input type="text" id="review-title" required>
@@ -158,6 +249,27 @@
         <button type="submit">작성</button>
       </form>
       <button class="close-btn" id="close-review-modal" style="margin-top:10px;">닫기</button>
+    </div>
+  </div>
+
+  <!-- 후기 수정 모달 -->
+  <div id="edit-review-modal">
+    <div class="modal-content">
+      <h2>후기 수정</h2>
+      <form id="edit-review-form">
+        <input type="hidden" id="edit-review-id">
+        <div class="form-group">
+          <label for="edit-review-title">제목</label>
+          <input type="text" id="edit-review-title" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-review-content">내용</label>
+          <textarea id="edit-review-content" rows="3" required style="width:100%;"></textarea>
+        </div>
+        <button type="submit" class="edit-btn">수정</button>
+        <button type="button" class="delete-btn" onclick="deleteReviewFromModal()">삭제</button>
+        <button type="button" class="cancel-btn" onclick="closeEditReviewModal()">취소</button>
+      </form>
     </div>
   </div>
 
@@ -187,7 +299,7 @@
 
     // 도시별 좌표
     function getCityCoordinates(city) {
-      switch(city) {
+      switch (city) {
         case '서울': return [37.5665, 126.9780];
         case '부산': return [35.1796, 129.0756];
         case '대구': return [35.8714, 128.6014];
@@ -202,7 +314,7 @@
     function getRecommendations() {
       const city = document.getElementById('city').value;
       const datetimeInput = document.getElementById('datetime').value;
-      
+
       if (!datetimeInput) {
         alert('날짜와 시간을 선택해주세요.');
         return;
@@ -231,22 +343,21 @@
             const minimalPopup = `<b>${place.name}</b><br/>테마: ${cat}`;
             const marker = L.marker([place.latitude, place.longitude]);
 
-            marker.on('mouseover', function() {
-              marker.bindTooltip(minimalPopup, {permanent: false}).openTooltip();
+            marker.on('mouseover', function () {
+              marker.bindTooltip(minimalPopup, { permanent: false }).openTooltip();
             });
-            marker.on('mouseout', function() {
+            marker.on('mouseout', function () {
               marker.closeTooltip();
             });
 
             // 클릭 시 이미지 + 후기 버튼
-            marker.on('click', function() {
+            marker.on('click', function () {
               fetch(`/api/getImage?contentid=${place.contentid}`)
                 .then(res => res.json())
                 .then(imgData => {
                   const imageTag = imgData.imageUrl
                     ? `<img src="${imgData.imageUrl}" alt="${place.name}" style="width:220px; max-height:150px; margin-top:5px;" />`
                     : `<div style="margin-top:5px;">이미지가 없습니다</div>`;
-
                   marker.bindPopup(
                     `<b>${place.name}</b><br/>
                      카테고리: ${cat}<br/>
@@ -277,7 +388,7 @@
     // 후기(게시글) 관련
     // ------------------------------
 
-    // 모달 열기
+    // 모달 열기 (후기 보기/작성)
     function openReviewModal(contentid) {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -286,63 +397,14 @@
       }
       document.getElementById('review-modal').style.display = 'block';
       document.getElementById('review-contentid').value = contentid;
+
       loadReviews(contentid);
     }
 
-    // 모달 닫기
+    // 모달 닫기 (후기 보기/작성)
     document.getElementById('close-review-modal').addEventListener('click', () => {
       document.getElementById('review-modal').style.display = 'none';
     });
-
-    // 후기 로드
-    function loadReviews(contentid) {
-      const token = localStorage.getItem('token');
-
-      // ✅ GET /articles?contentid=xxx
-      fetch(`/articles?contentid=${contentid}`, {
-        headers: { 'Authorization': 'Bearer ' + token }
-      })
-      .then(res => res.json())
-      .then(data => {
-        const reviewList = document.getElementById('review-list');
-        reviewList.innerHTML = '';
-        if (data.length === 0) {
-          reviewList.innerHTML = '<p>작성된 후기가 없습니다.</p>';
-        } else {
-          data.forEach(review => {
-            const reviewItem = document.createElement('div');
-            reviewItem.style.borderBottom = '1px solid #ddd';
-            reviewItem.style.marginBottom = '10px';
-            reviewItem.style.paddingBottom = '5px';
-            reviewItem.innerHTML = `
-              <strong>${review.title}</strong> <small>(${review.timestamp})</small><br/>
-              <span>${review.content}</span><br/>
-              <small>작성자: ${review.author}</small>
-            `;
-
-            // 본인 글만 수정/삭제 버튼 표시
-            const currentUserToken = localStorage.getItem('token');
-            if (currentUserToken && review.user_id === parseJwt(currentUserToken).id) {
-              const editBtn = document.createElement('button');
-              editBtn.textContent = '수정';
-              editBtn.style.marginRight = '5px';
-              editBtn.onclick = () => { editReview(review); };
-              
-              const deleteBtn = document.createElement('button');
-              deleteBtn.textContent = '삭제';
-              deleteBtn.onclick = () => { deleteReview(review.id); };
-
-              reviewItem.appendChild(editBtn);
-              reviewItem.appendChild(deleteBtn);
-            }
-            reviewList.appendChild(reviewItem);
-          });
-        }
-      })
-      .catch(err => {
-        console.error('후기 로드 실패:', err);
-      });
-    }
 
     // 간단한 JWT 파싱
     function parseJwt(token) {
@@ -355,7 +417,52 @@
       }
     }
 
-    // 후기 작성
+    // 후기 로드 및 렌더링
+    function loadReviews(contentid) {
+      const token = localStorage.getItem('token');
+
+      // GET /articles?contentid=xxx
+      fetch(`/articles?contentid=${contentid}`, {
+        headers: { 'Authorization': 'Bearer ' + token }
+      })
+        .then(res => res.json())
+        .then(data => {
+          const reviewList = document.getElementById('review-list');
+          reviewList.innerHTML = '';
+          if (data.length === 0) {
+            reviewList.innerHTML = '<p>작성된 후기가 없습니다.</p>';
+          } else {
+            data.forEach(review => {
+              const reviewItem = document.createElement('div');
+              reviewItem.style.borderBottom = '1px solid #ddd';
+              reviewItem.style.marginBottom = '10px';
+              reviewItem.style.paddingBottom = '5px';
+              reviewItem.innerHTML = `
+              <strong>${review.title}</strong> <small>(${review.timestamp})</small><br/>
+              <span>${review.content}</span><br/>
+              <small>작성자: ${review.author}</small>
+            `;
+              // 현재 로그인한 사용자가 작성한 후기라면 클릭 시 수정/삭제 모달 열기
+              const currentUserToken = localStorage.getItem('token');
+              console.log(parseJwt(currentUserToken).id)
+              console.log(review)
+              if (currentUserToken && review.author === parseJwt(currentUserToken).email) {
+                reviewItem.style.cursor = 'pointer';
+                reviewItem.addEventListener('click', () => {
+                  openEditReviewModal(review);
+                });
+              }
+
+              reviewList.appendChild(reviewItem);
+            });
+          }
+        })
+        .catch(err => {
+          console.error('후기 로드 실패:', err);
+        });
+    }
+
+    // 후기 작성 (POST /articles)
     document.getElementById('review-form').addEventListener('submit', e => {
       e.preventDefault();
       const token = localStorage.getItem('token');
@@ -367,7 +474,6 @@
       const title = document.getElementById('review-title').value;
       const content = document.getElementById('review-content').value;
 
-      // ✅ POST /articles
       fetch('/articles', {
         method: 'POST',
         headers: {
@@ -376,31 +482,45 @@
         },
         body: JSON.stringify({ contentid, title, content })
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          alert('후기 작성 실패: ' + data.error);
-        } else {
-          alert('후기 작성 완료!');
-          document.getElementById('review-form').reset();
-          loadReviews(contentid);
-        }
-      })
-      .catch(err => {
-        console.error('후기 작성 오류:', err);
-      });
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert('후기 작성 실패: ' + data.error);
+          } else {
+            alert('후기 작성 완료!');
+            document.getElementById('review-form').reset();
+            loadReviews(contentid);
+          }
+        })
+        .catch(err => {
+          console.error('후기 작성 오류:', err);
+        });
     });
 
-    // 후기 수정
-    function editReview(review) {
-      const newTitle = prompt('제목 수정:', review.title);
-      if (newTitle === null) return; // 취소 시
-      const newContent = prompt('내용 수정:', review.content);
-      if (newContent === null) return;
+    // ============== 수정/삭제 모달 관련 함수 ==============
 
+    // 모달 열기 (수정/삭제) – 클릭한 후기의 데이터를 모달에 채워넣음
+    function openEditReviewModal(review) {
+      document.getElementById('edit-review-id').value = review.id;
+      document.getElementById('edit-review-title').value = review.title;
+      document.getElementById('edit-review-content').value = review.content;
+      document.getElementById('edit-review-modal').style.display = 'block';
+    }
+
+    // 수정/삭제 모달 닫기
+    function closeEditReviewModal() {
+      document.getElementById('edit-review-modal').style.display = 'none';
+    }
+
+    // 수정/삭제 모달 내 수정 폼 제출 시 (PUT /articles/:id)
+    document.getElementById('edit-review-form').addEventListener('submit', function (e) {
+      e.preventDefault();
+      const reviewId = document.getElementById('edit-review-id').value;
+      const newTitle = document.getElementById('edit-review-title').value;
+      const newContent = document.getElementById('edit-review-content').value;
       const token = localStorage.getItem('token');
-      // ✅ PUT /articles/:id
-      fetch(`/articles/${review.id}`, {
+
+      fetch(`/articles/${reviewId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -408,46 +528,50 @@
         },
         body: JSON.stringify({ title: newTitle, content: newContent })
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          alert('후기 수정 실패: ' + data.error);
-        } else {
-          alert('수정 완료!');
-          loadReviews(review.contentid);
-        }
-      })
-      .catch(err => {
-        console.error('후기 수정 오류:', err);
-      });
-    }
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert('수정 실패: ' + data.error);
+          } else {
+            alert('수정 완료!');
+            closeEditReviewModal();
+            const contentid = document.getElementById('review-contentid').value;
+            loadReviews(contentid);
+          }
+        })
+        .catch(err => {
+          console.error('후기 수정 오류:', err);
+          alert('후기 수정 중 오류가 발생했습니다.');
+        });
+    });
 
-    // 후기 삭제
-    function deleteReview(reviewId) {
-      const yes = confirm('정말 삭제하시겠습니까?');
-      if (!yes) return;
-
+    // 수정/삭제 모달 내 삭제 버튼 클릭 시 (DELETE /articles/:id)
+    function deleteReviewFromModal() {
+      if (!confirm('정말 삭제하시겠습니까?')) return;
+      const reviewId = document.getElementById('edit-review-id').value;
       const token = localStorage.getItem('token');
-      // ✅ DELETE /articles/:id
+
       fetch(`/articles/${reviewId}`, {
         method: 'DELETE',
         headers: { 'Authorization': 'Bearer ' + token }
       })
-      .then(res => res.json())
-      .then(data => {
-        if (data.error) {
-          alert('후기 삭제 실패: ' + data.error);
-        } else {
-          alert('삭제 완료!');
-          // 삭제 후, 해당 리뷰가 속한 contentid 다시 로딩
-          const contentid = document.getElementById('review-contentid').value;
-          loadReviews(contentid);
-        }
-      })
-      .catch(err => {
-        console.error('후기 삭제 오류:', err);
-      });
+        .then(res => res.json())
+        .then(data => {
+          if (data.error) {
+            alert('삭제 실패: ' + data.error);
+          } else {
+            alert('삭제 완료!');
+            closeEditReviewModal();
+            const contentid = document.getElementById('review-contentid').value;
+            loadReviews(contentid);
+          }
+        })
+        .catch(err => {
+          console.error('후기 삭제 오류:', err);
+          alert('후기 삭제 중 오류가 발생했습니다.');
+        });
     }
   </script>
 </body>
+
 </html>

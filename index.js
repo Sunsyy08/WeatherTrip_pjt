@@ -327,7 +327,42 @@ app.get('/articles', authenticateToken, (req, res) => {
 });
 
 
-// 1. 전체 게시글 조회 (GET /articles)
+// 특정 게시글(후기) 하나만 조회 (GET /articles/:id)
+app.get('/articles/:id', authenticateToken, (req, res) => {
+  const articleId = req.params.id;
+
+  // comments 테이블과 users 테이블을 JOIN해서 
+  // 해당 게시글 + 작성자 정보(email)까지 가져오는 예시
+  const sql = `
+    SELECT 
+      c.id, 
+      c.title, 
+      c.content,
+      c.contentid,
+      c.timestamp,
+      c.user_id,
+      u.email AS author
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+    WHERE c.id = ?
+  `;
+
+  db.get(sql, [articleId], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: 'DB 오류', details: err.message });
+    }
+    if (!row) {
+      return res.status(404).json({ error: '게시글이 존재하지 않습니다.' });
+    }
+
+    // 게시글 데이터 반환
+    res.json(row);
+  });
+});
+
+
+// 2. 게시글 작성 (POST /articles)
+//    - 로그인한 사용자만 작성 가능하며, 작성 시 토큰에 담긴 user_id를 함께 저장
 //    - comments 테이블에서 게시글을 조회하며, 작성자(email) 정보를 users 테이블과 조인
 app.post('/articles', authenticateToken, (req, res) => {
   const { title, content, contentid } = req.body;
@@ -344,63 +379,50 @@ app.post('/articles', authenticateToken, (req, res) => {
 });
 
 
-// 2. 게시글 작성 (POST /articles)
-//    - 로그인한 사용자만 작성 가능하며, 작성 시 토큰에 담긴 user_id를 함께 저장
-app.post('/articles', authenticateToken, (req, res) => {
-  const { title, content } = req.body;
-  const userId = req.user.id;
 
-  const sql = `INSERT INTO comments (title, content, user_id) VALUES (?, ?, ?)`;
-  db.run(sql, [title, content, userId], function(err) {
-    if (err) {
-      return res.status(500).json({ error: '게시글 작성 실패', details: err.message });
-    }
-    res.status(201).json({ message: '게시글 작성 완료', articleId: this.lastID });
-  });
-});
+
 
 // 3. 게시글 수정 (PUT /articles/:id)
 //    - 수정은 해당 게시글의 작성자만 가능하도록 체크 (user_id 비교)
+// 후기(게시글) 수정 - 작성자만 가능
 app.put('/articles/:id', authenticateToken, (req, res) => {
   const articleId = req.params.id;
   const { title, content } = req.body;
   const userId = req.user.id;
 
-  // 먼저 해당 게시글이 로그인한 사용자의 글인지 확인
-  db.get('SELECT * FROM comments WHERE id = ?', [articleId], (err, article) => {
+  db.get('SELECT * FROM comments  WHERE id = ?', [articleId], (err, article) => {
     if (err) return res.status(500).json({ error: '게시글 조회 실패', details: err.message });
     if (!article) return res.status(404).json({ error: '게시글이 존재하지 않습니다.' });
     if (article.user_id !== userId) {
       return res.status(403).json({ error: '수정 권한이 없습니다.' });
     }
-    
-    // 본인 글이면 수정 진행
-    db.run('UPDATE comments SET title = ?, content = ? WHERE id = ?', [title, content, articleId], function(err) {
+
+    db.run('UPDATE comments  SET title = ?, content = ? WHERE id = ?', [title, content, articleId], function(err) {
       if (err) return res.status(500).json({ error: '게시글 수정 실패', details: err.message });
       res.json({ message: '게시글 수정 완료' });
     });
   });
 });
 
-// 4. 게시글 삭제 (DELETE /articles/:id)
-//    - 삭제 역시 해당 게시글의 작성자만 가능하도록 체크 (user_id 비교)
+// 후기(게시글) 삭제 - 작성자만 가능
 app.delete('/articles/:id', authenticateToken, (req, res) => {
   const articleId = req.params.id;
   const userId = req.user.id;
 
-  db.get('SELECT * FROM comments WHERE id = ?', [articleId], (err, article) => {
+  db.get('SELECT * FROM comments  WHERE id = ?', [articleId], (err, article) => {
     if (err) return res.status(500).json({ error: '게시글 조회 실패', details: err.message });
     if (!article) return res.status(404).json({ error: '게시글이 존재하지 않습니다.' });
     if (article.user_id !== userId) {
       return res.status(403).json({ error: '삭제 권한이 없습니다.' });
     }
-    
-    db.run('DELETE FROM comments WHERE id = ?', [articleId], function(err) {
+
+    db.run('DELETE FROM comments  WHERE id = ?', [articleId], function(err) {
       if (err) return res.status(500).json({ error: '게시글 삭제 실패', details: err.message });
       res.json({ message: '게시글 삭제 완료' });
     });
   });
 });
+
 
 app.listen(PORT, () => {
   console.log(`✅ 서버 실행 중: http://localhost:${PORT}`);
