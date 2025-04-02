@@ -302,30 +302,114 @@ app.post('/login', (req, res) => {
 
 // 1. 전체 게시글 조회 (GET /articles)
 //    - 로그인한 사용자만 볼 수 있도록 authenticateToken 미들웨어 사용
+// 2. 기존 /articles 엔드포인트를 수정하여 contentid 필터링 기능 추가
 app.get('/articles', authenticateToken, (req, res) => {
-  // comments 테이블 + users 테이블 조인: 댓글 ID, 작성자 이메일, 등등
+  const contentId = req.query.contentid;
+  
+  let sql = `
+    SELECT 
+      c.id, 
+      c.title, 
+      c.content,
+      c.contentid,
+      c.timestamp,
+      u.email AS author
+    FROM comments c
+    JOIN users u ON c.user_id = u.id
+  `;
+  
+  let params = [];
+  
+  // contentId가 제공된 경우에만 필터링
+  if (contentId) {
+    sql += ` WHERE c.contentid = ?`;
+    params.push(contentId);
+  }
+  
+  sql += ` ORDER BY c.id DESC`;
+  
+  db.all(sql, params, (err, rows) => {
+    if (err) {
+      return res.status(500).json({ error: '게시글 조회 실패', details: err.message });
+    }
+    res.json(rows);
+  });
+});
+
+// 1. 특정 관광지의 후기만 조회하는 엔드포인트 추가
+app.get('/api/destinations/:contentid/articles', authenticateToken, (req, res) => {
+  const contentId = req.params.contentid;
+  
   const sql = `
     SELECT 
       c.id, 
       c.title, 
       c.content,
       c.contentid,
-      c.timestamp,   -- 만약 comments 테이블에 timestamp 칼럼이 있다면
+      c.timestamp,
       u.email AS author
     FROM comments c
     JOIN users u ON c.user_id = u.id
+    WHERE c.contentid = ?
     ORDER BY c.id DESC
   `;
-
-  db.all(sql, [], (err, rows) => {
+  
+  db.all(sql, [contentId], (err, rows) => {
     if (err) {
-      return res.status(500).json({ error: '게시글 조회 실패', details: err.message });
+      return res.status(500).json({ error: '후기 조회 실패', details: err.message });
     }
-    // rows = [ { id: 1, title: '...', content: '...', contentid: '1234', timestamp: '...', author: 'xxx@xxx' }, ... ]
     res.json(rows);
   });
 });
 
+
+// 3. 관광지 상세 정보 조회 시 해당 관광지의 후기도 함께 가져오는 엔드포인트
+app.get('/api/destinations/:contentid', authenticateToken, (req, res) => {
+  const contentId = req.params.contentid;
+  
+  // 관광지 정보 조회
+  const destinationSql = `
+    SELECT name, city, latitude, longitude, category, contentid
+    FROM destinations
+    WHERE contentid = ?
+  `;
+  
+  db.get(destinationSql, [contentId], (err, destination) => {
+    if (err) {
+      return res.status(500).json({ error: '관광지 조회 실패', details: err.message });
+    }
+    
+    if (!destination) {
+      return res.status(404).json({ error: '관광지를 찾을 수 없습니다.' });
+    }
+    
+    // 해당 관광지의 후기 조회
+    const reviewsSql = `
+      SELECT 
+        c.id, 
+        c.title, 
+        c.content,
+        c.timestamp,
+        u.email AS author
+      FROM comments c
+      JOIN users u ON c.user_id = u.id
+      WHERE c.contentid = ?
+      ORDER BY c.id DESC
+    `;
+    
+    db.all(reviewsSql, [contentId], (err, reviews) => {
+      if (err) {
+        return res.status(500).json({ error: '후기 조회 실패', details: err.message });
+      }
+      
+      // 관광지 정보와 후기 정보를 함께 응답
+      res.json({
+        destination,
+        reviews
+      });
+    });
+  });
+});
 
 // 특정 게시글(후기) 하나만 조회 (GET /articles/:id)
 app.get('/articles/:id', authenticateToken, (req, res) => {
@@ -360,21 +444,59 @@ app.get('/articles/:id', authenticateToken, (req, res) => {
   });
 });
 
+// 관광지 이름 가져오는 API 추가
+app.get('/api/destinations/name/:contentid', (req, res) => {
+  const contentId = req.params.contentid;
+  
+  db.get('SELECT name FROM destinations WHERE contentid = ?', [contentId], (err, row) => {
+    if (err) {
+      return res.status(500).json({ error: 'DB 오류', details: err.message });
+    }
+    
+    if (!row) {
+      return res.status(404).json({ error: '관광지를 찾을 수 없습니다' });
+    }
+    
+    res.json({ name: row.name });
+  });
+});
+
 
 // 2. 게시글 작성 (POST /articles)
 //    - 로그인한 사용자만 작성 가능하며, 작성 시 토큰에 담긴 user_id를 함께 저장
 //    - comments 테이블에서 게시글을 조회하며, 작성자(email) 정보를 users 테이블과 조인
+// 기존 POST /articles 엔드포인트 수정 - contentid 필수 유효성 검증 추가
 app.post('/articles', authenticateToken, (req, res) => {
   const { title, content, contentid } = req.body;
   const userId = req.user.id;
-
-  // DB에 contentid까지 넣어야 함
-  const sql = `INSERT INTO comments (title, content, user_id, contentid) VALUES (?, ?, ?, ?)`;
-  db.run(sql, [title, content, userId, contentid], function(err) {
+  
+  // contentid 유효성 검증 추가
+  if (!contentid) {
+    return res.status(400).json({ error: '관광지 ID(contentid)가 필요합니다' });
+  }
+  
+  // 해당 contentid가 실제 존재하는지 확인 (destinations 테이블 조회)
+  db.get('SELECT * FROM destinations WHERE contentid = ?', [contentid], (err, destination) => {
     if (err) {
-      return res.status(500).json({ error: '후기 작성 실패', details: err.message });
+      return res.status(500).json({ error: 'DB 오류', details: err.message });
     }
-    res.status(201).json({ message: '후기 작성 완료', articleId: this.lastID });
+    
+    if (!destination) {
+      return res.status(404).json({ error: '존재하지 않는 관광지입니다' });
+    }
+    
+    // 검증이 완료되면 후기 저장
+    const sql = `INSERT INTO comments (title, content, user_id, contentid) VALUES (?, ?, ?, ?)`;
+    db.run(sql, [title, content, userId, contentid], function(err) {
+      if (err) {
+        return res.status(500).json({ error: '후기 작성 실패', details: err.message });
+      }
+      res.status(201).json({ 
+        message: '후기 작성 완료', 
+        articleId: this.lastID,
+        destinationName: destination.name  // 관광지 이름 추가
+      });
+    });
   });
 });
 
