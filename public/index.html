@@ -6,13 +6,22 @@
   <title>날씨 기반 여행지 추천 서비스</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
+
+html, body {
+  height: 100%;
+}
+
   body {
     font-family: 'Malgun Gothic', sans-serif; /* 맑은 고딕 적용 */
     margin: 0;
     padding: 0;
     background-color: #f8f9fa; /* 연한 배경색 */
+    font-family: 'Noto Sans KR', sans-serif; /* 전체 폰트 변경 */
   }
 
+    h1, h2, h3 {
+    font-family: 'Montserrat', sans-serif; /* 제목 폰트 변경 */
+  }
   /* 헤더 스타일 */
   header {
     background: #fff; /* 흰색 배경 */
@@ -46,6 +55,7 @@
     max-width: 600px;
     border-radius: 10px; /* 둥근 모서리 */
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* 그림자 효과 */
+    margin-top: 20px; /* 폼 컨테이너 위 여백 추가 */
   }
 
   #form-container h1 {
@@ -99,22 +109,26 @@
   #map {
     width: 100%;
     height: calc(100vh - 200px); /* 헤더 및 폼 높이 고려 */
+    border-radius: 15px; /* 지도 모서리 둥글게 */
+    overflow: hidden; /* 모서리 밖으로 내용 숨김 */
+    margin: 20px auto; /* 가운데 정렬 및 여백 추가 */
   }
 
-  /* 후기 모달 스타일 */
+
   #review-modal,
-  #edit-review-modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 9999;
-    justify-content: center; /* 중앙 정렬 */
-    align-items: center; /* 중앙 정렬 */
-  }
+#edit-review-modal {
+  display: none; /* 초기에는 숨김 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  justify-content: center;
+  align-items: center;
+}
+
 
   #review-modal .modal-content,
   #edit-review-modal .modal-content {
@@ -123,6 +137,8 @@
     border-radius: 10px;
     max-width: 600px;
     width: 80%;
+    height: 100vh; /* 💡 이거 꼭 필요! */
+
     max-height: 80vh;
     overflow-y: auto;
   }
@@ -485,6 +501,7 @@
     // 모달 열기 (후기 보기/작성)
 // 모달 열기 (후기 보기/작성) - 관광지 이름 가져오기 추가
 function openReviewModal(contentid) {
+  console.log(contentid)
   const token = localStorage.getItem('token');
   if (!token) {
     alert('로그인이 필요합니다.');
@@ -508,6 +525,11 @@ function openReviewModal(contentid) {
   
   document.getElementById('review-modal').style.display = 'block';
   document.getElementById('review-contentid').value = contentid;
+
+
+    document.getElementById('review-modal').style.display = 'flex'; // display: flex로 변경
+  document.getElementById('review-contentid').value = contentid;
+  loadReviews(contentid);
 
   loadReviews(contentid);
 }
