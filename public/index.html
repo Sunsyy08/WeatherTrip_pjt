@@ -114,6 +114,20 @@ html, body {
     margin: 20px auto; /* 가운데 정렬 및 여백 추가 */
   }
 
+  #edit-review-modal {
+  display: none; /* 초기에는 숨김 */
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 9999;
+  /* 추가: 중앙 정렬을 위한 flex 설정 */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
   #review-modal,
 #edit-review-modal {
@@ -552,59 +566,60 @@ function openReviewModal(contentid) {
 
     // 후기 로드 및 렌더링
     // 후기 로드 및 렌더링 개선
-function loadReviews(contentid) {
+    function loadReviews(contentid) {
+  console.log('loadReviews => contentid:', contentid);
   const token = localStorage.getItem('token');
-  const currentUser = token ? parseJwt(token).email : null;
 
-  // GET /articles?contentid=xxx
+  // GET /articles?contentid=xxx (수정)
   fetch(`/articles?contentid=${contentid}`, {
     headers: { 'Authorization': 'Bearer ' + token }
   })
-    .then(res => res.json())
-    .then(data => {
-      const reviewList = document.getElementById('review-list');
-      reviewList.innerHTML = '';
+  .then(res => res.json())
+  .then(data => {
+    console.log('loadReviews => data:', data);
+    const reviewList = document.getElementById('review-list');
+    reviewList.innerHTML = '';
+    
+    if (!data || data.length === 0) {
+      reviewList.innerHTML = '<p>작성된 후기가 없습니다.</p>';
+    } else {
+      // 후기 개수 표시
+      const reviewCount = document.createElement('p');
+      reviewCount.innerHTML = `<strong>총 ${data.length}개의 후기가 있습니다.</strong>`;
+      reviewList.appendChild(reviewCount);
       
-      if (data.length === 0) {
-        reviewList.innerHTML = '<p>작성된 후기가 없습니다.</p>';
-      } else {
-        // 후기 개수 표시
-        const reviewCount = document.createElement('p');
-        reviewCount.innerHTML = `<strong>총 ${data.length}개의 후기가 있습니다.</strong>`;
-        reviewList.appendChild(reviewCount);
+      data.forEach(review => {
+        const reviewItem = document.createElement('div');
+        reviewItem.className = 'review-item';
         
-        data.forEach(review => {
-          const reviewItem = document.createElement('div');
-          reviewItem.className = 'review-item';
-          
-          // 현재 로그인한 사용자의 후기인 경우 스타일 변경
-          if (currentUser && review.author === currentUser) {
-            reviewItem.classList.add('editable');
-            reviewItem.title = '클릭하여 수정 또는 삭제';
-          }
-          
-          reviewItem.innerHTML = `
-            <div class="review-title">${review.title}</div>
-            <div class="review-date">${review.timestamp}</div>
-            <div class="review-content">${review.content}</div>
-            <div class="review-author">작성자: ${review.author}</div>
-          `;
-          
-          // 자신의 후기면 클릭 시 수정/삭제 모달 열기
-          if (currentUser && review.author === currentUser) {
-            reviewItem.addEventListener('click', () => {
-              openEditReviewModal(review);
-            });
-          }
-
-          reviewList.appendChild(reviewItem);
-        });
-      }
-    })
-    .catch(err => {
-      console.error('후기 로드 실패:', err);
-      document.getElementById('review-list').innerHTML = '<p>후기를 불러오는 중 오류가 발생했습니다.</p>';
-    });
+        // 현재 로그인한 사용자의 후기인 경우 스타일 변경
+        const currentUser = localStorage.getItem('token') ? parseJwt(localStorage.getItem('token')).email : null;
+        if (currentUser && review.author === currentUser) {
+          reviewItem.classList.add('editable');
+          reviewItem.title = '클릭하여 수정 또는 삭제';
+        }
+        
+        reviewItem.innerHTML = `
+          <div class="review-title">${review.title}</div>
+          <div class="review-date">${review.timestamp}</div>
+          <div class="review-content">${review.content}</div>
+          <div class="review-author">작성자: ${review.author}</div>
+        `;
+        
+        // 자신의 후기면 클릭 시 수정/삭제 모달 열기
+        if (currentUser && review.author === currentUser) {
+          reviewItem.addEventListener('click', () => {
+            openEditReviewModal(review);
+          });
+        }
+        reviewList.appendChild(reviewItem);
+      });
+    }
+  })
+  .catch(err => {
+    console.error('후기 로드 실패:', err);
+    document.getElementById('review-list').innerHTML = '<p>후기를 불러오는 중 오류가 발생했습니다.</p>';
+  });
 }
 
     // 후기 작성 (POST /articles)
@@ -666,7 +681,7 @@ document.getElementById('review-form').addEventListener('submit', e => {
       document.getElementById('edit-review-id').value = review.id;
       document.getElementById('edit-review-title').value = review.title;
       document.getElementById('edit-review-content').value = review.content;
-      document.getElementById('edit-review-modal').style.display = 'block';
+      document.getElementById('edit-review-modal').style.display = 'flex';
     }
 
     // 수정/삭제 모달 닫기

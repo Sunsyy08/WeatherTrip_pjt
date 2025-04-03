@@ -184,7 +184,7 @@ app.get('/api/recommendByForecast', async (req, res) => {
       if (!rows || rows.length === 0) {
         // Fallback: 날씨 조건 없이 도시만 사용하여 데이터 반환
         const fallbackSql = `
-          SELECT name, city, latitude, longitude, category
+          SELECT name, city, latitude, longitude, category, contentid
           FROM destinations
           WHERE city = ?
           LIMIT 100
@@ -339,7 +339,8 @@ app.get('/articles', authenticateToken, (req, res) => {
 // 1. 특정 관광지의 후기만 조회하는 엔드포인트 추가
 app.get('/api/destinations/:contentid/articles', authenticateToken, (req, res) => {
   const contentId = req.params.contentid;
-  
+  console.log("✅ 후기 조회 요청 들어옴:", contentId);
+
   const sql = `
     SELECT 
       c.id, 
